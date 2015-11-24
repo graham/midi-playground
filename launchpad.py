@@ -5,8 +5,8 @@ import random
 midiout = rtmidi.MidiOut()
 available_ports = midiout.get_ports()
 
-if available_ports:
-    midiout.open_port(0)
+if 'Launchpad' in available_ports:
+    midiout.open_port(available_ports.index('Launchpad'))
 else:
     midiout.open_virtual_port("My virtual output")
 
@@ -20,6 +20,7 @@ def full(value):
         for row in range(0, 8):
             loc = (16 * row) + col
             midiout.send_message([0x90, loc, value])
+
 sleep = lambda: time.sleep(0.05)
 
 buffer1()
@@ -47,6 +48,7 @@ sleep()
 saved = []
 
 def responder(pack, other):
+    print pack, other
     keys, time = pack
     chan, key, vel = keys
     if vel == 0:

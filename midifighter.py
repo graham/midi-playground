@@ -3,15 +3,15 @@ import rtmidi
 import random
 
 midiout = rtmidi.MidiOut()
+midiin = rtmidi.MidiIn()
 available_ports = midiout.get_ports()
 
-if available_ports:
-    midiout.open_port(0)
-else:
-    midiout.open_virtual_port("My virtual output")
+midiout.open_port(available_ports.index('Midi Fighter Spectra'))
+midiin.open_port(available_ports.index('Midi Fighter Spectra'))    
 
 note_on = [0x90, 60, 112] # channel 1, middle C, velocity 112
 note_off = [0x80, 60, 0]
+
 midiout.send_message(note_on)
 time.sleep(0.5)
 midiout.send_message(note_off)
@@ -49,6 +49,9 @@ def choose_bank(id):
 def rcolor():
     return random.choice(colors)
 
+def rbutton():
+    return random.choice(buttons)
+
 def clear():
     for i in buttons:
         midiout.send_message([146, i, 0])
@@ -60,11 +63,11 @@ def pop():
 def roll():
     while True:
         pop()
-        time.sleep(0.25)
+        time.sleep(0.05)
 
 def p(a,c):
     for i in buttons:
-        midiout.send_message([a,i, c])
+        midiout.send_message([a,i,c])
 
 def waterfall():
     while True:
@@ -84,3 +87,53 @@ def waterfall():
         time.sleep(0.2)
         for i in range(16, 20):
             midiout.send_message([147, i, 1])
+
+def bottom_on(bid):
+    set_bottom(bid, 127)
+
+def bottom_off(bid):
+    set_bottom(bid, 1)
+
+def set_bottom(bid, bright):
+    midiout.send_message([147, bid, ])
+    
+def set_button(bid, color, bright=0, gate=None, pulse=None):
+    midiout.send_message([147, bid, 18 + bright])
+    midiout.send_message([146, bid, color])
+
+    if gate:
+        midiout.send_message([147, bid, 34+gate])
+    if pulse:
+        midiout.send_message([147, bid, 42+pulse])
+
+def fader(bid):
+    color = rcolor()
+    for i in range(0, 16):
+        for j in range(0, 2):
+            yield set_button(bid, color, 15 - i)
+    yield set_button(bid, 0, gate=0, pulse=0)
+
+
+def echo((nums, ts), n):
+    action, button, vel = nums
+    if action == 146:
+        funcs.append( fader(button) )
+    elif action == 130:
+        pass
+
+midiin.set_callback(echo)
+funcs = []
+
+while True:
+    time.sleep(0.025)
+    keep = []
+    for i in funcs:
+        try:
+            i.next()
+            keep.append(i)
+        except:
+            keep.append(fader(rbutton()))
+
+    funcs = keep
+
+    
